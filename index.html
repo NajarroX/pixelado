@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESTATICAM - Instalación ASCII Matrix</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+
+        body {
+            background-color: #000;
+            color: #0f0;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            font-family: 'Courier New', monospace;
+        }
+
+        .header {
+            padding: 15px;
+            background-color: rgba(0, 20, 0, 0.8);
+            border-bottom: 1px solid #0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 0 0 5px #0f0;
+            letter-spacing: 2px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label {
+            font-size: 12px;
+            color: #0a0;
+        }
+
+        select, input, button {
+            background-color: #000;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 5px 10px;
+            font-family: 'Courier New', monospace;
+            border-radius: 3px;
+        }
+
+        button:hover {
+            background-color: #0f0;
+            color: #000;
+            cursor: pointer;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        #video-container {
+            flex: 1;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background-color: #000;
+        }
+
+        #ascii-canvas {
+            font-family: 'Courier New', monospace;
+            white-space: pre;
+            line-height: 1;
+            letter-spacing: 0;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            cursor: none;
+            z-index: 2;
+            text-align: center;
+            background-color: #000;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .aspect-ratio-guide {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 1px dashed rgba(0, 255, 0, 0.3);
+            pointer-events: none;
+            z-index: 1;
+            display: none;
+        }
+
+        #hidden-canvas {
+            display: none;
+        }
+
+        .sidebar {
+            width: 300px;
+            background-color: rgba(0, 20, 0, 0.8);
+            border-left: 1px solid #0f0;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            color: #0f0;
+            border-bottom: 1px solid #0f0;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+
+        .mode-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .mode-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .mode-option input {
+            cursor: pointer;
+        }
+
+        .custom-text-input {
+            width: 100%;
+            height: 80px;
+            background-color: #000;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            resize: none;
+        }
+
+        .info-panel {
+            background-color: rgba(0, 30, 0, 0.5);
+            padding: 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .footer {
+            padding: 10px;
+            background-color: rgba(0, 20, 0, 0.8);
+            border-top: 1px solid #0f0;
+            text-align: center;
+            font-size: 12px;
+            color: #0a0;
+        }
+
+        .glitch-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 255, 0, 0.03);
+            pointer-events: none;
+            z-index: 1;
+            animation: glitch 3s infinite;
+        }
+
+        @keyframes glitch {
+            0% { opacity: 0.05; }
+            50% { opacity: 0.1; }
+            100% { opacity: 0.05; }
+        }
+
+        @media (max-width: 1024px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                border-left: none;
+                border-top: 1px solid #0f0;
+                max-height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">ESTATICAM - Instalación ASCII Matrix</div>
+        <div class="controls">
+            <div class="control-group">
+                <label for="resolution">Resolución ASCII:</label>
+                <select id="resolution">
+                    <option value="0.2">20% (patrones grandes)</option>
+                    <option value="0.3">30%</option>
+                    <option value="0.4">40%</option>
+                    <option value="0.5">50% (máxima fluidez)</option>
+                    <option value="0.6">60%</option>
+                    <option value="0.7" selected>70%</option>
+                    <option value="0.8">80%</option>
+                    <option value="0.9">90%</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="char-density">Densidad de caracteres:</label>
+                <select id="char-density">
+                    <option value="4">Muy baja (patrones)</option>
+                    <option value="6">Baja</option>
+                    <option value="8" selected>Media</option>
+                    <option value="10">Alta</option>
+                    <option value="12">Muy alta</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="brightness">Brillo:</label>
+                <input type="range" id="brightness" min="0" max="200" value="100">
+            </div>
+            <button id="capture-btn">Capturar Imagen</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div id="video-container">
+            <div class="glitch-effect"></div>
+            <div class="aspect-ratio-guide"></div>
+            <div id="ascii-canvas"></div>
+        </div>
+
+        <div class="sidebar">
+            <div>
+                <div class="section-title">Modos de Visualización</div>
+                <div class="mode-selector">
+                    <div class="mode-option">
+                        <input type="radio" id="mode-matrix" name="mode" value="matrix" checked>
+                        <label for="mode-matrix">Matrix (caracteres aleatorios)</label>
+                    </div>
+                    <div class="mode-option">
+                        <input type="radio" id="mode-density" name="mode" value="density">
+                        <label for="mode-density">Densidad (caracteres por brillo)</label>
+                    </div>
+                    <div class="mode-option">
+                        <input type="radio" id="mode-binary" name="mode" value="binary">
+                        <label for="mode-binary">Binario (0 y 1)</label>
+                    </div>
+                    <div class="mode-option">
+                        <input type="radio" id="mode-custom" name="mode" value="custom">
+                        <label for="mode-custom">Texto personalizado</label>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="section-title">Texto Personalizado</div>
+                <textarea id="custom-text" class="custom-text-input" placeholder="Escribe tu texto aquí... Se usará para generar el arte ASCII.">NAJARROX</textarea>
+            </div>
+
+            <div>
+                <div class="section-title">Efecto de Desarme</div>
+                <div class="info-panel">
+                    Pasa el cursor sobre la imagen para "desarmar" los caracteres ASCII. Al alejarlo, la imagen se reordenará gradualmente. También funciona en dispositivos táctiles.
+                </div>
+            </div>
+
+            <div>
+                <div class="section-title">Información</div>
+                <div class="info-panel">
+                    <p><strong>Resolución actual:</strong> <span id="current-resolution">70%</span></p>
+                    <p><strong>Caracteres por frame:</strong> <span id="char-count">0</span></p>
+                    <p><strong>FPS:</strong> <span id="fps-counter">0</span></p>
+                    <p><strong>Modo activo:</strong> <span id="active-mode">Matrix</span></p>
+                    <p><strong>Proporción video:</strong> <span id="aspect-ratio">0:0</span></p>
+                    <p><strong>Tamaño visualización:</strong> <span id="display-size">0x0</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        ESTATICAM - Instalación digital de conversión ASCII por NajarroX
+    </div>
+
+    <!-- Canvas oculto para procesamiento -->
+    <canvas id="hidden-canvas"></canvas>
+
+    <script>
+        // Elementos DOM
+        const asciiCanvas = document.getElementById('ascii-canvas');
+        const hiddenCanvas = document.getElementById('hidden-canvas');
+        const hiddenCtx = hiddenCanvas.getContext('2d');
+        const resolutionSelect = document.getElementById('resolution');
+        const charDensitySelect = document.getElementById('char-density');
+        const brightnessSlider = document.getElementById('brightness');
+        const captureBtn = document.getElementById('capture-btn');
+        const charCountElement = document.getElementById('char-count');
+        const fpsCounterElement = document.getElementById('fps-counter');
+        const currentResolutionElement = document.getElementById('current-resolution');
+        const activeModeElement = document.getElementById('active-mode');
+        const aspectRatioElement = document.getElementById('aspect-ratio');
+        const displaySizeElement = document.getElementById('display-size');
+        const customTextElement = document.getElementById('custom-text');
+        
+        // Variables de estado
+        let videoStream = null;
+        let video = null;
+        let asciiWidth = 0;
+        let asciiHeight = 0;
+        let blockSize = 8;
+        let isProcessing = false;
+        let lastTimestamp = 0;
+        let frameCount = 0;
+        let fps = 0;
+        let currentMode = 'matrix';
+        let customChars = [];
+        let glitchData = [];
+        let glitchTimeout = null;
+        let videoAspectRatio = 4/3; // Proporción por defecto
+        let currentDisplayWidth = 0;
+        let currentDisplayHeight = 0;
+        let actualVideoWidth = 0;
+        let actualVideoHeight = 0;
+        
+        // Caracteres para diferentes modos
+        const matrixChars = "01░▒▓█$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. ";
+        const densityChars = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. ";
+        const binaryChars = "01";
+        
+        // Inicialización
+        function init() {
+            // Escuchar cambios en los modos
+            document.querySelectorAll('input[name="mode"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    currentMode = e.target.value;
+                    updateActiveMode();
+                    
+                    // Si es modo personalizado, actualizar caracteres
+                    if (currentMode === 'custom') {
+                        updateCustomChars();
+                    }
+                });
+            });
+            
+            // Escuchar cambios en el texto personalizado
+            customTextElement.addEventListener('input', updateCustomChars);
+            
+            // Configurar controles
+            resolutionSelect.addEventListener('change', setupCanvas);
+            charDensitySelect.addEventListener('change', setupCanvas);
+            brightnessSlider.addEventListener('input', () => {});
+            captureBtn.addEventListener('click', captureImage);
+            
+            // Inicializar datos de glitch
+            initGlitchData();
+            
+            // Iniciar webcam
+            startWebcam();
+            
+            // Configurar efecto de desarme con mouse/touch
+            setupInteraction();
+            
+            // Configurar redimensionamiento de ventana
+            window.addEventListener('resize', setupCanvas);
+            
+            // Iniciar bucle de renderizado
+            requestAnimationFrame(render);
+        }
+        
+        // Inicializar datos para efecto de desarme
+        function initGlitchData() {
+            glitchData = [];
+        }
+        
+        // Configurar interacción de desarme
+        function setupInteraction() {
+            asciiCanvas.addEventListener('mousemove', handleMouseMove);
+            asciiCanvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+            asciiCanvas.addEventListener('mouseleave', handleMouseLeave);
+        }
+        
+        // Manejar movimiento del mouse
+        function handleMouseMove(e) {
+            const rect = asciiCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            applyGlitchEffect(x, y);
+        }
+        
+        // Manejar toque en dispositivos táctiles
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (e.touches.length > 0) {
+                const touch = e.touches[0];
+                const rect = asciiCanvas.getBoundingClientRect();
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+                
+                applyGlitchEffect(x, y);
+            }
+        }
+        
+        // Aplicar efecto de desarme
+        function applyGlitchEffect(x, y) {
+            // Normalizar coordenadas
+            const normalizedX = x / currentDisplayWidth;
+            const normalizedY = y / currentDisplayHeight;
+            
+            // Calcular índice de área afectada
+            const centerCol = Math.floor(normalizedX * asciiWidth);
+            const centerRow = Math.floor(normalizedY * asciiHeight);
+            
+            // Radio del efecto (depende del tamaño del bloque)
+            const radius = Math.max(2, Math.floor(12 / blockSize));
+            
+            // Aplicar efecto a los caracteres alrededor del punto
+            for (let row = Math.max(0, centerRow - radius); row < Math.min(asciiHeight, centerRow + radius); row++) {
+                for (let col = Math.max(0, centerCol - radius); col < Math.min(asciiWidth, centerCol + radius); col++) {
+                    const index = row * asciiWidth + col;
+                    
+                    // Guardar posición original si no está guardada
+                    if (!glitchData[index]) {
+                        glitchData[index] = {
+                            originalRow: row,
+                            originalCol: col,
+                            currentRow: row,
+                            currentCol: col
+                        };
+                    }
+                    
+                    // Calcular distancia al centro
+                    const distance = Math.sqrt(Math.pow(row - centerRow, 2) + Math.pow(col - centerCol, 2));
+                    
+                    // Aplicar desplazamiento proporcional a la distancia
+                    if (distance < radius) {
+                        const intensity = 1 - (distance / radius);
+                        
+                        // Desplazar caracteres aleatoriamente
+                        glitchData[index].currentRow = row + (Math.random() - 0.5) * 5 * intensity;
+                        glitchData[index].currentCol = col + (Math.random() - 0.5) * 5 * intensity;
+                    }
+                }
+            }
+            
+            // Reiniciar temporizador de restauración
+            clearTimeout(glitchTimeout);
+            glitchTimeout = setTimeout(restoreGlitch, 1000);
+        }
+        
+        // Restaurar caracteres a su posición original
+        function restoreGlitch() {
+            const restoreInterval = setInterval(() => {
+                let restored = true;
+                
+                for (let i = 0; i < glitchData.length; i++) {
+                    if (!glitchData[i]) continue;
+                    
+                    const data = glitchData[i];
+                    
+                    // Calcular diferencia entre posición actual y original
+                    const rowDiff = data.originalRow - data.currentRow;
+                    const colDiff = data.originalCol - data.currentCol;
+                    
+                    // Si ya está en la posición original, saltar
+                    if (Math.abs(rowDiff) < 0.1 && Math.abs(colDiff) < 0.1) {
+                        data.currentRow = data.originalRow;
+                        data.currentCol = data.originalCol;
+                        continue;
+                    }
+                    
+                    // Mover gradualmente hacia la posición original
+                    data.currentRow += rowDiff * 0.1;
+                    data.currentCol += colDiff * 0.1;
+                    restored = false;
+                }
+                
+                // Si todos los caracteres están restaurados, detener el intervalo
+                if (restored) {
+                    clearInterval(restoreInterval);
+                }
+            }, 16); // ~60fps
+        }
+        
+        // Manejar cuando el mouse sale del área
+        function handleMouseLeave() {
+            restoreGlitch();
+        }
+        
+        // Actualizar caracteres personalizados
+        function updateCustomChars() {
+            const text = customTextElement.value.trim();
+            if (text) {
+                customChars = text.split('');
+            } else {
+                customChars = "NAJARROX".split('');
+            }
+            updateActiveMode();
+        }
+        
+        // Actualizar modo activo mostrado
+        function updateActiveMode() {
+            let modeName = '';
+            switch(currentMode) {
+                case 'matrix': modeName = 'Matrix'; break;
+                case 'density': modeName = 'Densidad'; break;
+                case 'binary': modeName = 'Binario'; break;
+                case 'custom': modeName = 'Personalizado'; break;
+            }
+            activeModeElement.textContent = modeName;
+        }
+        
+        // Iniciar webcam
+        async function startWebcam() {
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: 'user'
+                    },
+                    audio: false
+                });
+                
+                video = document.createElement('video');
+                video.srcObject = videoStream;
+                video.autoplay = true;
+                video.playsInline = true;
+                
+                // Esperar a que el video esté listo
+                video.addEventListener('loadedmetadata', () => {
+                    // Obtener proporción real del video
+                    actualVideoWidth = video.videoWidth;
+                    actualVideoHeight = video.videoHeight;
+                    videoAspectRatio = actualVideoWidth / actualVideoHeight;
+                    
+                    aspectRatioElement.textContent = `${actualVideoWidth}:${actualVideoHeight}`;
+                    setupCanvas();
+                });
+            } catch (error) {
+                console.error('Error al acceder a la webcam:', error);
+                alert('No se pudo acceder a la webcam. Asegúrate de haber dado los permisos necesarios.');
+                
+                // Cargar una imagen de prueba si no hay webcam
+                loadFallbackImage();
+            }
+        }
+        
+        // Cargar imagen de prueba si no hay webcam
+        function loadFallbackImage() {
+            video = document.createElement('img');
+            video.src = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&h=600&q=80';
+            video.crossOrigin = 'anonymous';
+            
+            video.addEventListener('load', () => {
+                actualVideoWidth = 800;
+                actualVideoHeight = 600;
+                videoAspectRatio = 800/600; // 4:3
+                aspectRatioElement.textContent = '800:600';
+                setupCanvas();
+                // Simular video con imagen estática
+                setInterval(() => {
+                    if (!isProcessing) {
+                        isProcessing = true;
+                        processFrame();
+                        isProcessing = false;
+                    }
+                }, 1000 / 30); // 30 FPS
+            });
+        }
+        
+        // Configurar canvas - PROPORCIÓN ORIGINAL SIN DISTORSIÓN
+        function setupCanvas() {
+            if (!video) return;
+            
+            const resolution = parseFloat(resolutionSelect.value);
+            currentResolutionElement.textContent = `${Math.round(resolution * 100)}%`;
+            
+            // Obtener densidad de caracteres seleccionada
+            blockSize = parseInt(charDensitySelect.value);
+            
+            // Calcular el tamaño máximo disponible en el contenedor
+            const container = document.getElementById('video-container');
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+            
+            // Calcular dimensiones que mantengan la proporción ORIGINAL del video
+            let displayWidth, displayHeight;
+            
+            // Calcular qué dimensión es la limitante
+            const widthBasedOnHeight = containerHeight * videoAspectRatio;
+            const heightBasedOnWidth = containerWidth / videoAspectRatio;
+            
+            if (widthBasedOnHeight <= containerWidth) {
+                // La altura es la limitante
+                displayHeight = containerHeight;
+                displayWidth = widthBasedOnHeight;
+            } else {
+                // El ancho es la limitante
+                displayWidth = containerWidth;
+                displayHeight = heightBasedOnWidth;
+            }
+            
+            // Asegurarse de que no exceda el contenedor
+            displayWidth = Math.min(displayWidth, containerWidth);
+            displayHeight = Math.min(displayHeight, containerHeight);
+            
+            // Guardar dimensiones actuales de visualización
+            currentDisplayWidth = displayWidth;
+            currentDisplayHeight = displayHeight;
+            displaySizeElement.textContent = `${Math.round(displayWidth)}x${Math.round(displayHeight)}`;
+            
+            // Calcular dimensiones de procesamiento (aplicando la resolución seleccionada)
+            const processingWidth = Math.floor(actualVideoWidth * resolution);
+            const processingHeight = Math.floor(actualVideoHeight * resolution);
+            
+            // Actualizar tamaño del canvas oculto (para procesamiento)
+            // Mantener la misma proporción que el video original
+            hiddenCanvas.width = processingWidth;
+            hiddenCanvas.height = processingHeight;
+            
+            // Calcular dimensiones ASCII (basadas en la densidad de caracteres)
+            // Usamos las dimensiones de procesamiento para calcular los caracteres
+            asciiWidth = Math.floor(processingWidth / blockSize);
+            asciiHeight = Math.floor(processingHeight / blockSize);
+            
+            // Ajustar el tamaño de fuente del canvas ASCII
+            // El tamaño de fuente se calcula para que los caracteres se vean bien en la pantalla
+            const fontSize = Math.min(
+                displayWidth / asciiWidth,
+                displayHeight / asciiHeight
+            );
+            
+            asciiCanvas.style.fontSize = `${fontSize}px`;
+            asciiCanvas.style.width = `${displayWidth}px`;
+            asciiCanvas.style.height = `${displayHeight}px`;
+            
+            // Inicializar datos de glitch
+            initGlitchData();
+        }
+        
+        // Renderizar frame
+        function render(timestamp) {
+            if (!isProcessing && video) {
+                isProcessing = true;
+                
+                // Calcular FPS
+                frameCount++;
+                if (timestamp - lastTimestamp >= 1000) {
+                    fps = frameCount;
+                    frameCount = 0;
+                    lastTimestamp = timestamp;
+                    fpsCounterElement.textContent = fps;
+                }
+                
+                // Procesar video a ASCII
+                processFrame();
+                
+                isProcessing = false;
+            }
+            
+            requestAnimationFrame(render);
+        }
+        
+        // Procesar frame de video a ASCII - SIN RECORTE, MANTIENE PROPORCIÓN
+        function processFrame() {
+            // Dibujar video/imagen en canvas oculto (SIN RECORTE)
+            // Simplemente dibujamos el video en el canvas manteniendo sus proporciones
+            if (video.tagName === 'VIDEO') {
+                // Limpiar canvas
+                hiddenCtx.fillStyle = '#000000';
+                hiddenCtx.fillRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+                
+                // Dibujar video escalado para llenar el canvas de procesamiento
+                hiddenCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
+            } else {
+                // Para imagen estática
+                hiddenCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
+            }
+            
+            // Obtener datos de imagen
+            const imageData = hiddenCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+            const data = imageData.data;
+            
+            // Aplicar ajustes de brillo
+            applyBrightness(data, parseInt(brightnessSlider.value) / 100);
+            
+            // Generar ASCII
+            let asciiArt = '';
+            const blockWidth = Math.floor(hiddenCanvas.width / asciiWidth);
+            const blockHeight = Math.floor(hiddenCanvas.height / asciiHeight);
+            
+            // Contador de caracteres
+            let totalChars = 0;
+            
+            // Generar filas ASCII
+            for (let row = 0; row < asciiHeight; row++) {
+                let rowText = '';
+                
+                for (let col = 0; col < asciiWidth; col++) {
+                    totalChars++;
+                    
+                    // Calcular posición del bloque
+                    const blockX = col * blockWidth;
+                    const blockY = row * blockHeight;
+                    
+                    // Calcular brillo promedio del bloque
+                    let brightness = 0;
+                    let pixelCount = 0;
+                    
+                    for (let y = 0; y < blockHeight; y++) {
+                        for (let x = 0; x < blockWidth; x++) {
+                            const pxX = Math.min(blockX + x, hiddenCanvas.width - 1);
+                            const pxY = Math.min(blockY + y, hiddenCanvas.height - 1);
+                            
+                            const idx = (pxY * hiddenCanvas.width + pxX) * 4;
+                            
+                            // Calcular brillo (fórmula estándar)
+                            const r = data[idx];
+                            const g = data[idx + 1];
+                            const b = data[idx + 2];
+                            
+                            brightness += 0.299 * r + 0.587 * g + 0.114 * b;
+                            pixelCount++;
+                        }
+                    }
+                    
+                    brightness = brightness / pixelCount / 255; // Normalizar a 0-1
+                    
+                    // Obtener carácter basado en el modo actual
+                    let char = getCharForBrightness(brightness);
+                    
+                    // Aplicar efecto de glitch si existe
+                    const index = row * asciiWidth + col;
+                    if (glitchData[index]) {
+                        const glitchRow = Math.floor(glitchData[index].currentRow);
+                        const glitchCol = Math.floor(glitchData[index].currentCol);
+                        
+                        // Si está dentro de los límites, obtener carácter de la posición glitcheada
+                        if (glitchRow >= 0 && glitchRow < asciiHeight && 
+                            glitchCol >= 0 && glitchCol < asciiWidth) {
+                            const glitchIndex = glitchRow * asciiWidth + glitchCol;
+                            const glitchBrightness = getBlockBrightness(glitchCol, glitchRow, blockWidth, blockHeight, data);
+                            char = getCharForBrightness(glitchBrightness);
+                        }
+                    }
+                    
+                    rowText += char;
+                }
+                
+                asciiArt += rowText + '\n';
+            }
+            
+            // Actualizar contador de caracteres
+            charCountElement.textContent = totalChars.toLocaleString();
+            
+            // Mostrar arte ASCII
+            asciiCanvas.textContent = asciiArt;
+        }
+        
+        // Obtener brillo de un bloque específico
+        function getBlockBrightness(col, row, blockWidth, blockHeight, data) {
+            const blockX = col * blockWidth;
+            const blockY = row * blockHeight;
+            
+            let brightness = 0;
+            let pixelCount = 0;
+            
+            for (let y = 0; y < blockHeight; y++) {
+                for (let x = 0; x < blockWidth; x++) {
+                    const pxX = Math.min(blockX + x, hiddenCanvas.width - 1);
+                    const pxY = Math.min(blockY + y, hiddenCanvas.height - 1);
+                    
+                    const idx = (pxY * hiddenCanvas.width + pxX) * 4;
+                    
+                    const r = data[idx];
+                    const g = data[idx + 1];
+                    const b = data[idx + 2];
+                    
+                    brightness += 0.299 * r + 0.587 * g + 0.114 * b;
+                    pixelCount++;
+                }
+            }
+            
+            return brightness / pixelCount / 255;
+        }
+        
+        // Obtener carácter basado en brillo y modo actual
+        function getCharForBrightness(brightness) {
+            let chars;
+            
+            switch(currentMode) {
+                case 'matrix':
+                    chars = matrixChars;
+                    break;
+                case 'density':
+                    chars = densityChars;
+                    break;
+                case 'binary':
+                    chars = binaryChars;
+                    break;
+                case 'custom':
+                    chars = customChars.length > 0 ? customChars : ['@'];
+                    break;
+                default:
+                    chars = matrixChars;
+            }
+            
+            // Invertir brillo para algunos modos (caracteres más oscuros = más brillo)
+            let adjustedBrightness = brightness;
+            if (currentMode === 'density' || currentMode === 'custom') {
+                adjustedBrightness = 1 - brightness;
+            }
+            
+            const index = Math.floor(adjustedBrightness * (chars.length - 1));
+            return chars[Math.max(0, Math.min(index, chars.length - 1))];
+        }
+        
+        // Aplicar ajustes de brillo
+        function applyBrightness(data, brightness) {
+            for (let i = 0; i < data.length; i += 4) {
+                // Aplicar brillo a cada canal
+                data[i] = Math.min(255, Math.max(0, data[i] * brightness)); // R
+                data[i + 1] = Math.min(255, Math.max(0, data[i + 1] * brightness)); // G
+                data[i + 2] = Math.min(255, Math.max(0, data[i + 2] * brightness)); // B
+            }
+        }
+        
+        // Capturar imagen - FORMATO 600x800px con diseño específico
+        function captureImage() {
+            if (!asciiCanvas.textContent) return;
+            
+            // Obtener el texto ASCII actual
+            const asciiArt = asciiCanvas.textContent;
+            
+            // Calcular dimensiones del texto ASCII
+            const lines = asciiArt.split('\n').filter(line => line.trim() !== '');
+            const linesCount = lines.length;
+            const maxLineLength = Math.max(...lines.map(line => line.length));
+            
+            // Dimensiones fijas de la imagen final: 600x800px
+            const CANVAS_WIDTH = 600;
+            const CANVAS_HEIGHT = 800;
+            
+            // Margen interior
+            const MARGIN = 40;
+            
+            // Área para el arte ASCII (centrada)
+            const asciiAreaWidth = CANVAS_WIDTH - (MARGIN * 2);
+            const asciiAreaHeight = 600; // 600px de altura para el arte ASCII
+            
+            // Área para el pie de página (200px de alto)
+            const footerHeight = 200;
+            
+            // Calcular tamaño de fuente para el arte ASCII
+            // Queremos que el arte ASCII ocupe todo el ancho disponible
+            const charWidth = 8; // Ancho aproximado de cada carácter con la fuente que usaremos
+            const charHeight = 12; // Alto aproximado
+            
+            // Calcular cuántos caracteres caben en el ancho disponible
+            const maxCharsPerLine = Math.floor(asciiAreaWidth / charWidth);
+            
+            // Si el arte ASCII tiene más caracteres que los que caben, necesitamos escalarlo
+            let fontSize = 12; // Tamaño base
+            if (maxLineLength > maxCharsPerLine) {
+                // Escalar para que quepa
+                fontSize = (maxCharsPerLine / maxLineLength) * 12;
+                fontSize = Math.max(6, fontSize); // No menos de 6px
+            }
+            
+            // Ajustar altura según el número de líneas
+            const lineHeight = fontSize * 1.2;
+            const totalAsciiHeight = linesCount * lineHeight;
+            
+            // Si el arte ASCII es más alto que el área disponible, escalamos más
+            if (totalAsciiHeight > asciiAreaHeight) {
+                const scaleFactor = asciiAreaHeight / totalAsciiHeight;
+                fontSize *= scaleFactor;
+                fontSize = Math.max(6, fontSize); // No menos de 6px
+            }
+            
+            // Recalcular dimensiones con el nuevo tamaño de fuente
+            const scaledCharWidth = fontSize * 0.6667; // Aproximación del ancho del carácter
+            const scaledCharHeight = fontSize;
+            const scaledLineHeight = fontSize * 1.2;
+            
+            // Calcular posición vertical para centrar el arte ASCII
+            const asciiStartY = MARGIN + (asciiAreaHeight - (linesCount * scaledLineHeight)) / 2;
+            
+            // Crear canvas para la captura
+            const captureCanvas = document.createElement('canvas');
+            const captureCtx = captureCanvas.getContext('2d');
+            
+            captureCanvas.width = CANVAS_WIDTH;
+            captureCanvas.height = CANVAS_HEIGHT;
+            
+            // Fondo blanco
+            captureCtx.fillStyle = '#FFFFFF';
+            captureCtx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            
+            // Configurar fuente para el arte ASCII
+            captureCtx.font = `${fontSize}px 'Courier New', monospace`;
+            captureCtx.fillStyle = '#000000';
+            captureCtx.textBaseline = 'top';
+            
+            // Dibujar cada línea de texto ASCII (centrada horizontalmente)
+            for (let i = 0; i < linesCount; i++) {
+                const line = lines[i];
+                const x = MARGIN + (asciiAreaWidth - (line.length * scaledCharWidth)) / 2;
+                const y = asciiStartY + (i * scaledLineHeight);
+                captureCtx.fillText(line, x, y);
+            }
+            
+            // Línea separadora
+            captureCtx.strokeStyle = '#000000';
+            captureCtx.lineWidth = 1;
+            captureCtx.beginPath();
+            captureCtx.moveTo(MARGIN, asciiAreaHeight + MARGIN);
+            captureCtx.lineTo(CANVAS_WIDTH - MARGIN, asciiAreaHeight + MARGIN);
+            captureCtx.stroke();
+            
+            // Pie de página - TITULAR (50% del ancho)
+            const now = new Date();
+            const dateString = now.toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+            
+            const timeString = now.toLocaleTimeString('es-ES', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            // Título principal (50% del ancho, centrado)
+            const titleWidth = CANVAS_WIDTH * 0.5;
+            const titleX = (CANVAS_WIDTH - titleWidth) / 2;
+            const titleY = asciiAreaHeight + MARGIN + 20;
+            
+            captureCtx.fillStyle = '#000000';
+            captureCtx.font = 'bold 24px "Courier New", monospace';
+            captureCtx.textAlign = 'center';
+            captureCtx.textBaseline = 'top';
+            captureCtx.fillText('ESTATICAM', CANVAS_WIDTH / 2, titleY);
+            
+            // Caja de información (ancho exacto, máximo 2 líneas)
+            const infoBoxWidth = 400;
+            const infoBoxX = (CANVAS_WIDTH - infoBoxWidth) / 2;
+            const infoBoxY = titleY + 40;
+            
+            // Fondo de la caja de información (opcional)
+            captureCtx.fillStyle = '#F5F5F5';
+            captureCtx.fillRect(infoBoxX, infoBoxY, infoBoxWidth, 60);
+            
+            // Bordes de la caja
+            captureCtx.strokeStyle = '#CCCCCC';
+            captureCtx.lineWidth = 1;
+            captureCtx.strokeRect(infoBoxX, infoBoxY, infoBoxWidth, 60);
+            
+            // Texto de información (formato de 2 líneas)
+            captureCtx.fillStyle = '#333333';
+            captureCtx.font = '14px "Courier New", monospace';
+            captureCtx.textAlign = 'center';
+            
+            // Primera línea: Fecha y hora
+            captureCtx.fillText(`${dateString} - ${timeString}`, CANVAS_WIDTH / 2, infoBoxY + 15);
+            
+            // Segunda línea: Información técnica
+            let modeName = '';
+            switch(currentMode) {
+                case 'matrix': modeName = 'Matrix'; break;
+                case 'density': modeName = 'Densidad'; break;
+                case 'binary': modeName = 'Binario'; break;
+                case 'custom': modeName = 'Personalizado'; break;
+            }
+            
+            const resolutionValue = Math.round(parseFloat(resolutionSelect.value) * 100);
+            const infoText = `Modo: ${modeName} | Res: ${resolutionValue}% | NajarroX`;
+            captureCtx.fillText(infoText, CANVAS_WIDTH / 2, infoBoxY + 40);
+            
+            // Convertir a URL de datos
+            const dataUrl = captureCanvas.toDataURL('image/png', 0.9);
+            
+            // Descargar imagen
+            const link = document.createElement('a');
+            link.download = `ESTATICAM_${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}.png`;
+            link.href = dataUrl;
+            link.click();
+            
+            // Mostrar mensaje de confirmación
+            showCaptureMessage();
+        }
+        
+        // Mostrar mensaje de captura
+        function showCaptureMessage() {
+            const message = document.createElement('div');
+            message.textContent = '¡Imagen capturada en formato 600x800px!';
+            message.style.position = 'fixed';
+            message.style.top = '20px';
+            message.style.left = '50%';
+            message.style.transform = 'translateX(-50%)';
+            message.style.backgroundColor = 'rgba(0, 40, 0, 0.9)';
+            message.style.color = '#0f0';
+            message.style.padding = '15px 25px';
+            message.style.borderRadius = '5px';
+            message.style.border = '2px solid #0f0';
+            message.style.zIndex = '1000';
+            message.style.fontSize = '16px';
+            message.style.textAlign = 'center';
+            message.style.boxShadow = '0 0 15px rgba(0, 255, 0, 0.5)';
+            
+            document.body.appendChild(message);
+            
+            setTimeout(() => {
+                if (message.parentNode) {
+                    document.body.removeChild(message);
+                }
+            }, 3000);
+        }
+        
+        // Inicializar cuando la página se carga
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
