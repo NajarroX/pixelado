@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESTATICAM - Instalación ASCII Matrix</title>
+    <title>PIXELADO - Cabina fotográfica ascii</title>
     <style>
         * {
             margin: 0;
@@ -221,7 +221,7 @@
 </head>
 <body>
     <div class="header">
-        <div class="title">ESTATICAM - Instalación ASCII Matrix</div>
+        <div class="title">PIXELADO - Cabina fotográfica ascii</div>
         <div class="controls">
             <div class="control-group">
                 <label for="resolution">Resolución ASCII:</label>
@@ -311,7 +311,7 @@
     </div>
 
     <div class="footer">
-        ESTATICAM - Instalación digital de conversión ASCII por NajarroX
+        PIXELADO - Cabina fotográfica ascii por NajarroX
     </div>
 
     <!-- Canvas oculto para procesamiento -->
@@ -973,7 +973,7 @@
             captureCtx.font = 'bold 24px "Courier New", monospace';
             captureCtx.textAlign = 'center';
             captureCtx.textBaseline = 'top';
-            captureCtx.fillText('ESTATICAM', CANVAS_WIDTH / 2, titleY);
+            captureCtx.fillText('PIXELADO', CANVAS_WIDTH / 2, titleY);
             
             // Caja de información (ancho exacto, máximo 2 líneas)
             const infoBoxWidth = 400;
@@ -1007,7 +1007,7 @@
             }
             
             const resolutionValue = Math.round(parseFloat(resolutionSelect.value) * 100);
-            const infoText = `Modo: ${modeName} | Res: ${resolutionValue}% | NajarroX`;
+            const infoText = `Modo: ${modeName} | Res: ${resolutionValue}% | Por NajarroX`;
             captureCtx.fillText(infoText, CANVAS_WIDTH / 2, infoBoxY + 40);
             
             // Convertir a URL de datos
@@ -1015,7 +1015,7 @@
             
             // Descargar imagen
             const link = document.createElement('a');
-            link.download = `ESTATICAM_${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}.png`;
+            link.download = `PIXELADO_${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}.png`;
             link.href = dataUrl;
             link.click();
             
