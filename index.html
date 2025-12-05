@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PIXELADO - Cabina fotográfica ascii</title>
+    <title>ESTATICAM - Instalación ASCII Matrix</title>
     <style>
         * {
             margin: 0;
@@ -104,19 +104,7 @@
             z-index: 2;
             text-align: center;
             background-color: #000;
-            max-width: 100%;
-            max-height: 100%;
-        }
-
-        .aspect-ratio-guide {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            border: 1px dashed rgba(0, 255, 0, 0.3);
-            pointer-events: none;
-            z-index: 1;
-            display: none;
+            user-select: none;
         }
 
         #hidden-canvas {
@@ -216,12 +204,77 @@
                 border-top: 1px solid #0f0;
                 max-height: 200px;
             }
+            
+            .title {
+                font-size: 18px;
+            }
+            
+            .controls {
+                gap: 10px;
+            }
+            
+            .control-group {
+                min-width: 120px;
+            }
+            
+            select, input, button {
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 10px;
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .title {
+                font-size: 16px;
+                text-align: center;
+                width: 100%;
+            }
+            
+            .controls {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .control-group {
+                flex: 1;
+                min-width: 100px;
+            }
+            
+            #capture-btn {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .control-group {
+                min-width: 80px;
+            }
+            
+            select, input, button {
+                font-size: 11px;
+                padding: 3px 6px;
+            }
+            
+            .section-title {
+                font-size: 14px;
+            }
+            
+            .custom-text-input {
+                height: 60px;
+                font-size: 12px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <div class="title">PIXELADO - Cabina fotográfica ascii</div>
+        <div class="title">ESTATICAM - Instalación ASCII Matrix</div>
         <div class="controls">
             <div class="control-group">
                 <label for="resolution">Resolución ASCII:</label>
@@ -257,7 +310,6 @@
     <div class="main-container">
         <div id="video-container">
             <div class="glitch-effect"></div>
-            <div class="aspect-ratio-guide"></div>
             <div id="ascii-canvas"></div>
         </div>
 
@@ -305,13 +357,14 @@
                     <p><strong>Modo activo:</strong> <span id="active-mode">Matrix</span></p>
                     <p><strong>Proporción video:</strong> <span id="aspect-ratio">0:0</span></p>
                     <p><strong>Tamaño visualización:</strong> <span id="display-size">0x0</span></p>
+                    <p><strong>Dispositivo:</strong> <span id="device-type">Desktop</span></p>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="footer">
-        PIXELADO - Cabina fotográfica ascii por NajarroX
+        ESTATICAM - Instalación digital de conversión ASCII por NajarroX
     </div>
 
     <!-- Canvas oculto para procesamiento -->
@@ -332,6 +385,7 @@
         const activeModeElement = document.getElementById('active-mode');
         const aspectRatioElement = document.getElementById('aspect-ratio');
         const displaySizeElement = document.getElementById('display-size');
+        const deviceTypeElement = document.getElementById('device-type');
         const customTextElement = document.getElementById('custom-text');
         
         // Variables de estado
@@ -348,11 +402,13 @@
         let customChars = [];
         let glitchData = [];
         let glitchTimeout = null;
-        let videoAspectRatio = 4/3; // Proporción por defecto
+        let videoAspectRatio = 4/3;
         let currentDisplayWidth = 0;
         let currentDisplayHeight = 0;
         let actualVideoWidth = 0;
         let actualVideoHeight = 0;
+        let isMobileDevice = false;
+        let forcedAspectRatio = null; // Para forzar proporción en móvil
         
         // Caracteres para diferentes modos
         const matrixChars = "01░▒▓█$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. ";
@@ -361,13 +417,15 @@
         
         // Inicialización
         function init() {
+            // Detectar dispositivo
+            detectDevice();
+            
             // Escuchar cambios en los modos
             document.querySelectorAll('input[name="mode"]').forEach(radio => {
                 radio.addEventListener('change', (e) => {
                     currentMode = e.target.value;
                     updateActiveMode();
                     
-                    // Si es modo personalizado, actualizar caracteres
                     if (currentMode === 'custom') {
                         updateCustomChars();
                     }
@@ -389,7 +447,7 @@
             // Iniciar webcam
             startWebcam();
             
-            // Configurar efecto de desarme con mouse/touch
+            // Configurar interacción
             setupInteraction();
             
             // Configurar redimensionamiento de ventana
@@ -399,6 +457,26 @@
             requestAnimationFrame(render);
         }
         
+        // Detectar tipo de dispositivo
+        function detectDevice() {
+            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+            isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+            
+            // También por tamaño de pantalla
+            if (window.innerWidth <= 768) {
+                isMobileDevice = true;
+            }
+            
+            deviceTypeElement.textContent = isMobileDevice ? 'Móvil' : 'Desktop';
+            
+            // En móvil, forzamos una proporción más ancha (16:9 o 4:3)
+            if (isMobileDevice) {
+                forcedAspectRatio = 16/9; // Proporción más ancha para móvil
+            } else {
+                forcedAspectRatio = null; // Usar proporción natural
+            }
+        }
+        
         // Inicializar datos para efecto de desarme
         function initGlitchData() {
             glitchData = [];
@@ -406,9 +484,12 @@
         
         // Configurar interacción de desarme
         function setupInteraction() {
+            // Eventos de mouse
             asciiCanvas.addEventListener('mousemove', handleMouseMove);
-            asciiCanvas.addEventListener('touchmove', handleTouchMove, { passive: false });
             asciiCanvas.addEventListener('mouseleave', handleMouseLeave);
+            
+            // Eventos táctiles
+            asciiCanvas.addEventListener('touchmove', handleTouchMove, { passive: false });
         }
         
         // Manejar movimiento del mouse
@@ -443,7 +524,7 @@
             const centerCol = Math.floor(normalizedX * asciiWidth);
             const centerRow = Math.floor(normalizedY * asciiHeight);
             
-            // Radio del efecto (depende del tamaño del bloque)
+            // Radio del efecto
             const radius = Math.max(2, Math.floor(12 / blockSize));
             
             // Aplicar efecto a los caracteres alrededor del punto
@@ -545,23 +626,26 @@
         // Iniciar webcam
         async function startWebcam() {
             try {
-                videoStream = await navigator.mediaDevices.getUserMedia({
+                // En móvil, pedir orientación landscape para mejor proporción
+                const constraints = {
                     video: {
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                        facingMode: 'user'
+                        width: { ideal: isMobileDevice ? 1280 : 1280 },
+                        height: { ideal: isMobileDevice ? 720 : 720 },
+                        facingMode: 'user',
+                        // En móvil, preferir orientación horizontal
+                        aspectRatio: isMobileDevice ? 16/9 : undefined
                     },
                     audio: false
-                });
+                };
+                
+                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
                 
                 video = document.createElement('video');
                 video.srcObject = videoStream;
                 video.autoplay = true;
                 video.playsInline = true;
                 
-                // Esperar a que el video esté listo
                 video.addEventListener('loadedmetadata', () => {
-                    // Obtener proporción real del video
                     actualVideoWidth = video.videoWidth;
                     actualVideoHeight = video.videoHeight;
                     videoAspectRatio = actualVideoWidth / actualVideoHeight;
@@ -572,8 +656,6 @@
             } catch (error) {
                 console.error('Error al acceder a la webcam:', error);
                 alert('No se pudo acceder a la webcam. Asegúrate de haber dado los permisos necesarios.');
-                
-                // Cargar una imagen de prueba si no hay webcam
                 loadFallbackImage();
             }
         }
@@ -587,87 +669,107 @@
             video.addEventListener('load', () => {
                 actualVideoWidth = 800;
                 actualVideoHeight = 600;
-                videoAspectRatio = 800/600; // 4:3
+                videoAspectRatio = 800/600;
                 aspectRatioElement.textContent = '800:600';
                 setupCanvas();
-                // Simular video con imagen estática
                 setInterval(() => {
                     if (!isProcessing) {
                         isProcessing = true;
                         processFrame();
                         isProcessing = false;
                     }
-                }, 1000 / 30); // 30 FPS
+                }, 1000 / 30);
             });
         }
         
-        // Configurar canvas - PROPORCIÓN ORIGINAL SIN DISTORSIÓN
+        // Configurar canvas - CON AJUSTES ESPECIALES PARA MÓVIL
         function setupCanvas() {
             if (!video) return;
             
             const resolution = parseFloat(resolutionSelect.value);
             currentResolutionElement.textContent = `${Math.round(resolution * 100)}%`;
             
-            // Obtener densidad de caracteres seleccionada
             blockSize = parseInt(charDensitySelect.value);
             
-            // Calcular el tamaño máximo disponible en el contenedor
             const container = document.getElementById('video-container');
             const containerWidth = container.clientWidth;
             const containerHeight = container.clientHeight;
             
-            // Calcular dimensiones que mantengan la proporción ORIGINAL del video
             let displayWidth, displayHeight;
+            let aspectRatioToUse = forcedAspectRatio || videoAspectRatio;
             
-            // Calcular qué dimensión es la limitante
-            const widthBasedOnHeight = containerHeight * videoAspectRatio;
-            const heightBasedOnWidth = containerWidth / videoAspectRatio;
-            
-            if (widthBasedOnHeight <= containerWidth) {
-                // La altura es la limitante
-                displayHeight = containerHeight;
-                displayWidth = widthBasedOnHeight;
-            } else {
-                // El ancho es la limitante
+            // EN MÓVIL: Forzar proporción más ancha y centrar verticalmente
+            if (isMobileDevice) {
+                // Forzamos una proporción de 16:9 (más ancha) en móvil
+                aspectRatioToUse = 16/9;
+                
+                // Calcular dimensiones basadas en el ancho del contenedor
                 displayWidth = containerWidth;
-                displayHeight = heightBasedOnWidth;
+                displayHeight = containerWidth / aspectRatioToUse;
+                
+                // Si es más alto que el contenedor, ajustar
+                if (displayHeight > containerHeight) {
+                    displayHeight = containerHeight;
+                    displayWidth = displayHeight * aspectRatioToUse;
+                }
+                
+                // Centrar verticalmente (recortando parte superior/inferior)
+                asciiCanvas.style.top = '50%';
+                asciiCanvas.style.left = '50%';
+                asciiCanvas.style.transform = 'translate(-50%, -50%)';
+            } else {
+                // En desktop, comportamiento normal
+                const widthBasedOnHeight = containerHeight * aspectRatioToUse;
+                const heightBasedOnWidth = containerWidth / aspectRatioToUse;
+                
+                if (widthBasedOnHeight <= containerWidth) {
+                    displayHeight = containerHeight;
+                    displayWidth = widthBasedOnHeight;
+                } else {
+                    displayWidth = containerWidth;
+                    displayHeight = heightBasedOnWidth;
+                }
             }
             
             // Asegurarse de que no exceda el contenedor
             displayWidth = Math.min(displayWidth, containerWidth);
             displayHeight = Math.min(displayHeight, containerHeight);
             
-            // Guardar dimensiones actuales de visualización
             currentDisplayWidth = displayWidth;
             currentDisplayHeight = displayHeight;
             displaySizeElement.textContent = `${Math.round(displayWidth)}x${Math.round(displayHeight)}`;
             
-            // Calcular dimensiones de procesamiento (aplicando la resolución seleccionada)
+            // Calcular dimensiones de procesamiento (resolución aplicada)
             const processingWidth = Math.floor(actualVideoWidth * resolution);
             const processingHeight = Math.floor(actualVideoHeight * resolution);
             
-            // Actualizar tamaño del canvas oculto (para procesamiento)
-            // Mantener la misma proporción que el video original
             hiddenCanvas.width = processingWidth;
             hiddenCanvas.height = processingHeight;
             
-            // Calcular dimensiones ASCII (basadas en la densidad de caracteres)
-            // Usamos las dimensiones de procesamiento para calcular los caracteres
+            // Calcular dimensiones ASCII
             asciiWidth = Math.floor(processingWidth / blockSize);
             asciiHeight = Math.floor(processingHeight / blockSize);
             
-            // Ajustar el tamaño de fuente del canvas ASCII
-            // El tamaño de fuente se calcula para que los caracteres se vean bien en la pantalla
-            const fontSize = Math.min(
-                displayWidth / asciiWidth,
-                displayHeight / asciiHeight
-            );
+            // Ajustar tamaño de fuente - EN MÓVIL usar tamaño más grande
+            let fontSize;
+            if (isMobileDevice) {
+                // En móvil, priorizar que se vean bien los caracteres
+                fontSize = Math.min(
+                    displayWidth / asciiWidth * 0.9,
+                    displayHeight / asciiHeight * 0.9
+                );
+                fontSize = Math.max(6, fontSize); // Mínimo 6px
+            } else {
+                fontSize = Math.min(
+                    displayWidth / asciiWidth,
+                    displayHeight / asciiHeight
+                );
+            }
             
             asciiCanvas.style.fontSize = `${fontSize}px`;
             asciiCanvas.style.width = `${displayWidth}px`;
             asciiCanvas.style.height = `${displayHeight}px`;
             
-            // Inicializar datos de glitch
             initGlitchData();
         }
         
@@ -676,7 +778,6 @@
             if (!isProcessing && video) {
                 isProcessing = true;
                 
-                // Calcular FPS
                 frameCount++;
                 if (timestamp - lastTimestamp >= 1000) {
                     fps = frameCount;
@@ -685,7 +786,6 @@
                     fpsCounterElement.textContent = fps;
                 }
                 
-                // Procesar video a ASCII
                 processFrame();
                 
                 isProcessing = false;
@@ -694,49 +794,64 @@
             requestAnimationFrame(render);
         }
         
-        // Procesar frame de video a ASCII - SIN RECORTE, MANTIENE PROPORCIÓN
+        // Procesar frame de video a ASCII - CON RECORTE EN MÓVIL
         function processFrame() {
-            // Dibujar video/imagen en canvas oculto (SIN RECORTE)
-            // Simplemente dibujamos el video en el canvas manteniendo sus proporciones
             if (video.tagName === 'VIDEO') {
-                // Limpiar canvas
                 hiddenCtx.fillStyle = '#000000';
                 hiddenCtx.fillRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
                 
-                // Dibujar video escalado para llenar el canvas de procesamiento
-                hiddenCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
+                // EN MÓVIL: Recortar parte superior/inferior para forzar proporción
+                if (isMobileDevice && forcedAspectRatio) {
+                    const sourceAspect = video.videoWidth / video.videoHeight;
+                    const targetAspect = forcedAspectRatio;
+                    
+                    let sourceX = 0, sourceY = 0, sourceWidth = video.videoWidth, sourceHeight = video.videoHeight;
+                    
+                    if (sourceAspect > targetAspect) {
+                        // Video es más ancho, recortar los lados
+                        sourceHeight = video.videoHeight;
+                        sourceWidth = sourceHeight * targetAspect;
+                        sourceX = (video.videoWidth - sourceWidth) / 2;
+                    } else {
+                        // Video es más alto, recortar arriba/abajo
+                        sourceWidth = video.videoWidth;
+                        sourceHeight = sourceWidth / targetAspect;
+                        sourceY = (video.videoHeight - sourceHeight) / 2;
+                    }
+                    
+                    hiddenCtx.drawImage(
+                        video, 
+                        sourceX, sourceY, sourceWidth, sourceHeight,
+                        0, 0, hiddenCanvas.width, hiddenCanvas.height
+                    );
+                } else {
+                    // Desktop: comportamiento normal
+                    hiddenCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
+                }
             } else {
-                // Para imagen estática
                 hiddenCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
             }
             
-            // Obtener datos de imagen
             const imageData = hiddenCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
             const data = imageData.data;
             
-            // Aplicar ajustes de brillo
             applyBrightness(data, parseInt(brightnessSlider.value) / 100);
             
-            // Generar ASCII
             let asciiArt = '';
             const blockWidth = Math.floor(hiddenCanvas.width / asciiWidth);
             const blockHeight = Math.floor(hiddenCanvas.height / asciiHeight);
             
-            // Contador de caracteres
             let totalChars = 0;
             
-            // Generar filas ASCII
             for (let row = 0; row < asciiHeight; row++) {
                 let rowText = '';
                 
                 for (let col = 0; col < asciiWidth; col++) {
                     totalChars++;
                     
-                    // Calcular posición del bloque
                     const blockX = col * blockWidth;
                     const blockY = row * blockHeight;
                     
-                    // Calcular brillo promedio del bloque
                     let brightness = 0;
                     let pixelCount = 0;
                     
@@ -747,7 +862,6 @@
                             
                             const idx = (pxY * hiddenCanvas.width + pxX) * 4;
                             
-                            // Calcular brillo (fórmula estándar)
                             const r = data[idx];
                             const g = data[idx + 1];
                             const b = data[idx + 2];
@@ -757,18 +871,15 @@
                         }
                     }
                     
-                    brightness = brightness / pixelCount / 255; // Normalizar a 0-1
+                    brightness = brightness / pixelCount / 255;
                     
-                    // Obtener carácter basado en el modo actual
                     let char = getCharForBrightness(brightness);
                     
-                    // Aplicar efecto de glitch si existe
                     const index = row * asciiWidth + col;
                     if (glitchData[index]) {
                         const glitchRow = Math.floor(glitchData[index].currentRow);
                         const glitchCol = Math.floor(glitchData[index].currentCol);
                         
-                        // Si está dentro de los límites, obtener carácter de la posición glitcheada
                         if (glitchRow >= 0 && glitchRow < asciiHeight && 
                             glitchCol >= 0 && glitchCol < asciiWidth) {
                             const glitchIndex = glitchRow * asciiWidth + glitchCol;
@@ -783,14 +894,11 @@
                 asciiArt += rowText + '\n';
             }
             
-            // Actualizar contador de caracteres
             charCountElement.textContent = totalChars.toLocaleString();
-            
-            // Mostrar arte ASCII
             asciiCanvas.textContent = asciiArt;
         }
         
-        // Obtener brillo de un bloque específico
+        // Obtener brillo de un bloque
         function getBlockBrightness(col, row, blockWidth, blockHeight, data) {
             const blockX = col * blockWidth;
             const blockY = row * blockHeight;
@@ -817,7 +925,7 @@
             return brightness / pixelCount / 255;
         }
         
-        // Obtener carácter basado en brillo y modo actual
+        // Obtener carácter basado en brillo y modo
         function getCharForBrightness(brightness) {
             let chars;
             
@@ -838,7 +946,6 @@
                     chars = matrixChars;
             }
             
-            // Invertir brillo para algunos modos (caracteres más oscuros = más brillo)
             let adjustedBrightness = brightness;
             if (currentMode === 'density' || currentMode === 'custom') {
                 adjustedBrightness = 1 - brightness;
@@ -851,91 +958,63 @@
         // Aplicar ajustes de brillo
         function applyBrightness(data, brightness) {
             for (let i = 0; i < data.length; i += 4) {
-                // Aplicar brillo a cada canal
-                data[i] = Math.min(255, Math.max(0, data[i] * brightness)); // R
-                data[i + 1] = Math.min(255, Math.max(0, data[i + 1] * brightness)); // G
-                data[i + 2] = Math.min(255, Math.max(0, data[i + 2] * brightness)); // B
+                data[i] = Math.min(255, Math.max(0, data[i] * brightness));
+                data[i + 1] = Math.min(255, Math.max(0, data[i + 1] * brightness));
+                data[i + 2] = Math.min(255, Math.max(0, data[i + 2] * brightness));
             }
         }
         
-        // Capturar imagen - FORMATO 600x800px con diseño específico
+        // Capturar imagen - FORMATO 600x800px (AJUSTADO PARA MÓVIL)
         function captureImage() {
             if (!asciiCanvas.textContent) return;
             
-            // Obtener el texto ASCII actual
             const asciiArt = asciiCanvas.textContent;
-            
-            // Calcular dimensiones del texto ASCII
             const lines = asciiArt.split('\n').filter(line => line.trim() !== '');
             const linesCount = lines.length;
             const maxLineLength = Math.max(...lines.map(line => line.length));
             
-            // Dimensiones fijas de la imagen final: 600x800px
             const CANVAS_WIDTH = 600;
             const CANVAS_HEIGHT = 800;
-            
-            // Margen interior
             const MARGIN = 40;
-            
-            // Área para el arte ASCII (centrada)
             const asciiAreaWidth = CANVAS_WIDTH - (MARGIN * 2);
-            const asciiAreaHeight = 600; // 600px de altura para el arte ASCII
+            const asciiAreaHeight = 600;
             
-            // Área para el pie de página (200px de alto)
-            const footerHeight = 200;
-            
-            // Calcular tamaño de fuente para el arte ASCII
-            // Queremos que el arte ASCII ocupe todo el ancho disponible
-            const charWidth = 8; // Ancho aproximado de cada carácter con la fuente que usaremos
-            const charHeight = 12; // Alto aproximado
-            
-            // Calcular cuántos caracteres caben en el ancho disponible
+            const charWidth = 8;
+            const charHeight = 12;
             const maxCharsPerLine = Math.floor(asciiAreaWidth / charWidth);
             
-            // Si el arte ASCII tiene más caracteres que los que caben, necesitamos escalarlo
-            let fontSize = 12; // Tamaño base
+            let fontSize = 12;
             if (maxLineLength > maxCharsPerLine) {
-                // Escalar para que quepa
                 fontSize = (maxCharsPerLine / maxLineLength) * 12;
-                fontSize = Math.max(6, fontSize); // No menos de 6px
+                fontSize = Math.max(6, fontSize);
             }
             
-            // Ajustar altura según el número de líneas
             const lineHeight = fontSize * 1.2;
             const totalAsciiHeight = linesCount * lineHeight;
             
-            // Si el arte ASCII es más alto que el área disponible, escalamos más
             if (totalAsciiHeight > asciiAreaHeight) {
                 const scaleFactor = asciiAreaHeight / totalAsciiHeight;
                 fontSize *= scaleFactor;
-                fontSize = Math.max(6, fontSize); // No menos de 6px
+                fontSize = Math.max(6, fontSize);
             }
             
-            // Recalcular dimensiones con el nuevo tamaño de fuente
-            const scaledCharWidth = fontSize * 0.6667; // Aproximación del ancho del carácter
-            const scaledCharHeight = fontSize;
+            const scaledCharWidth = fontSize * 0.6667;
             const scaledLineHeight = fontSize * 1.2;
-            
-            // Calcular posición vertical para centrar el arte ASCII
             const asciiStartY = MARGIN + (asciiAreaHeight - (linesCount * scaledLineHeight)) / 2;
             
-            // Crear canvas para la captura
             const captureCanvas = document.createElement('canvas');
             const captureCtx = captureCanvas.getContext('2d');
             
             captureCanvas.width = CANVAS_WIDTH;
             captureCanvas.height = CANVAS_HEIGHT;
             
-            // Fondo blanco
             captureCtx.fillStyle = '#FFFFFF';
             captureCtx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
             
-            // Configurar fuente para el arte ASCII
             captureCtx.font = `${fontSize}px 'Courier New', monospace`;
             captureCtx.fillStyle = '#000000';
             captureCtx.textBaseline = 'top';
             
-            // Dibujar cada línea de texto ASCII (centrada horizontalmente)
             for (let i = 0; i < linesCount; i++) {
                 const line = lines[i];
                 const x = MARGIN + (asciiAreaWidth - (line.length * scaledCharWidth)) / 2;
@@ -943,7 +1022,6 @@
                 captureCtx.fillText(line, x, y);
             }
             
-            // Línea separadora
             captureCtx.strokeStyle = '#000000';
             captureCtx.lineWidth = 1;
             captureCtx.beginPath();
@@ -951,7 +1029,6 @@
             captureCtx.lineTo(CANVAS_WIDTH - MARGIN, asciiAreaHeight + MARGIN);
             captureCtx.stroke();
             
-            // Pie de página - TITULAR (50% del ancho)
             const now = new Date();
             const dateString = now.toLocaleDateString('es-ES', {
                 day: '2-digit',
@@ -964,40 +1041,31 @@
                 minute: '2-digit'
             });
             
-            // Título principal (50% del ancho, centrado)
-            const titleWidth = CANVAS_WIDTH * 0.5;
-            const titleX = (CANVAS_WIDTH - titleWidth) / 2;
             const titleY = asciiAreaHeight + MARGIN + 20;
             
             captureCtx.fillStyle = '#000000';
             captureCtx.font = 'bold 24px "Courier New", monospace';
             captureCtx.textAlign = 'center';
             captureCtx.textBaseline = 'top';
-            captureCtx.fillText('PIXELADO', CANVAS_WIDTH / 2, titleY);
+            captureCtx.fillText('ESTATICAM', CANVAS_WIDTH / 2, titleY);
             
-            // Caja de información (ancho exacto, máximo 2 líneas)
             const infoBoxWidth = 400;
             const infoBoxX = (CANVAS_WIDTH - infoBoxWidth) / 2;
             const infoBoxY = titleY + 40;
             
-            // Fondo de la caja de información (opcional)
             captureCtx.fillStyle = '#F5F5F5';
             captureCtx.fillRect(infoBoxX, infoBoxY, infoBoxWidth, 60);
             
-            // Bordes de la caja
             captureCtx.strokeStyle = '#CCCCCC';
             captureCtx.lineWidth = 1;
             captureCtx.strokeRect(infoBoxX, infoBoxY, infoBoxWidth, 60);
             
-            // Texto de información (formato de 2 líneas)
             captureCtx.fillStyle = '#333333';
             captureCtx.font = '14px "Courier New", monospace';
             captureCtx.textAlign = 'center';
             
-            // Primera línea: Fecha y hora
             captureCtx.fillText(`${dateString} - ${timeString}`, CANVAS_WIDTH / 2, infoBoxY + 15);
             
-            // Segunda línea: Información técnica
             let modeName = '';
             switch(currentMode) {
                 case 'matrix': modeName = 'Matrix'; break;
@@ -1007,19 +1075,16 @@
             }
             
             const resolutionValue = Math.round(parseFloat(resolutionSelect.value) * 100);
-            const infoText = `Modo: ${modeName} | Res: ${resolutionValue}% | Por NajarroX`;
+            const infoText = `Modo: ${modeName} | Res: ${resolutionValue}% | NajarroX`;
             captureCtx.fillText(infoText, CANVAS_WIDTH / 2, infoBoxY + 40);
             
-            // Convertir a URL de datos
             const dataUrl = captureCanvas.toDataURL('image/png', 0.9);
             
-            // Descargar imagen
             const link = document.createElement('a');
-            link.download = `PIXELADO_${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}.png`;
+            link.download = `ESTATICAM_${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}.png`;
             link.href = dataUrl;
             link.click();
             
-            // Mostrar mensaje de confirmación
             showCaptureMessage();
         }
         
